@@ -1,19 +1,8 @@
-"""
-CRUD-операции для всех сущностей проекта.
-CRUD = Create, Read, Update, Delete — четыре базовых действия с данными.
-
-Каждая функция сама открывает сессию (соединение с БД для одной операции),
-делает свою работу и закрывает сессию. Это удобно для тестового скрипта:
-не нужно думать об управлении сессиями снаружи.
-"""
-
 from sqlalchemy import select
 from database import SessionLocal
 from models import Role, User, Category, Course, Module, Enrollment
 from sqlalchemy.orm import selectinload
 
-
-# ---------------------- ROLE ----------------------
 
 def create_role(name: str, description: str | None = None) -> Role:
     with SessionLocal() as session:
@@ -37,7 +26,6 @@ def get_all_roles() -> list[Role]:
     with SessionLocal() as session:
         return list(session.execute(select(Role)).scalars().all())
 
-# ---------------------- USERS ----------------------
 
 def create_user(full_name: str, email: str, password_hash: str, role_name: str) -> User:
     with SessionLocal() as session:
@@ -53,7 +41,7 @@ def create_user(full_name: str, email: str, password_hash: str, role_name: str) 
         user = User(full_name=full_name, email=email, password_hash=password_hash, role_id=role.id)
         session.add(user)
         session.commit()
-        session.refresh(user)  # подтягиваем id и created_at, сгенерированные базой
+        session.refresh(user) 
         return user
 
 def get_user_by_id(user_id: int) -> User | None:
@@ -81,7 +69,6 @@ def update_user(user_id: int, **fields) -> User | None:
         if user is None:
             return None
         
-        # отдельная обработка role_name → role_id
         role_name = fields.pop("role_name", None)
         if role_name is not None:
             role = session.execute(
@@ -110,7 +97,6 @@ def delete_user(user_id: int) -> bool:
         return True
 
 
-# ---------------------- CATEGORIES ----------------------
 
 def create_category(name: str, description: str | None = None) -> Category:
     with SessionLocal() as session:
@@ -136,7 +122,6 @@ def delete_category(category_id: int) -> bool:
         return True
 
 
-# ---------------------- COURSES ----------------------
 
 def create_course(
     title: str,
@@ -165,10 +150,9 @@ def get_course_by_id(course_id: int) -> Course | None:
 
 
 def get_courses_catalog(category_id: int | None = None) -> list[Course]:
-    """Каталог опубликованных курсов, опционально отфильтрованный по категории.
-    Соответствует сценарию 3 из ЛР0 — просмотр каталога с фильтрацией."""
+
     with SessionLocal() as session:
-        stmt = select(Course).where(Course.is_published == True)  # noqa: E712
+        stmt = select(Course).where(Course.is_published == True)
         if category_id is not None:
             stmt = stmt.where(Course.category_id == category_id)
         return list(session.execute(stmt).scalars().all())
@@ -191,12 +175,11 @@ def delete_course(course_id: int) -> bool:
         course = session.get(Course, course_id)
         if course is None:
             return False
-        session.delete(course)  # каскадно удалит его модули и записи на курс
+        session.delete(course)  
         session.commit()
         return True
 
 
-# ---------------------- MODULES ----------------------
 
 def create_module(course_id: int, title: str, order_num: int, content: str | None = None) -> Module:
     with SessionLocal() as session:
@@ -208,7 +191,7 @@ def create_module(course_id: int, title: str, order_num: int, content: str | Non
 
 
 def get_modules_by_course(course_id: int) -> list[Module]:
-    """Структура курса — список модулей по порядку. Сценарий 5 из ЛР0."""
+
     with SessionLocal() as session:
         stmt = select(Module).where(Module.course_id == course_id).order_by(Module.order_num)
         return list(session.execute(stmt).scalars().all())
@@ -236,18 +219,16 @@ def delete_module(module_id: int) -> bool:
         return True
 
 
-# ---------------------- ENROLLMENTS ----------------------
 
 def enroll_student(student_id: int, course_id: int) -> Enrollment | None:
-    """Запись студента на курс. Сценарий 4 из ЛР0 — проверяем, что записи ещё нет."""
     with SessionLocal() as session:
         stmt = select(Enrollment).where(
             Enrollment.student_id == student_id, Enrollment.course_id == course_id
         )
         existing = session.execute(stmt).scalar_one_or_none()
         if existing is not None:
-            return None  # уже записан — новую запись не создаём
-
+            return None  
+        
         enrollment = Enrollment(student_id=student_id, course_id=course_id)
         session.add(enrollment)
         session.commit()
@@ -256,7 +237,7 @@ def enroll_student(student_id: int, course_id: int) -> Enrollment | None:
 
 
 def get_my_courses(student_id: int) -> list[Course]:
-    """Раздел «Мои курсы» — курсы, на которые записан студент."""
+
     with SessionLocal() as session:
         stmt = (
             select(Course)
@@ -267,7 +248,6 @@ def get_my_courses(student_id: int) -> list[Course]:
 
 
 def get_students_of_course(course_id: int) -> list[User]:
-    """Список студентов, записанных на курс — нужен преподавателю."""
     with SessionLocal() as session:
         stmt = (
             select(User)

@@ -1,11 +1,3 @@
-"""
-Заполняет базу тестовыми данными: роли, категории, пользователи
-(преподаватели и студенты), курсы, модули и записи на курсы.
-
-Запускать один раз на пустой базе:
-    python seed_data.py
-"""
-
 from utils import fake_hash
 from crud import (
     create_role, create_category, create_user,
@@ -13,23 +5,20 @@ from crud import (
 )
 
 def run():
-    # --- роли (создаются ПЕРВЫМИ, иначе create_user упадёт) ---
     create_role("student", "Студент — проходит обучение")
     create_role("teacher", "Преподаватель — создаёт курсы")
     create_role("admin", "Администратор — управляет системой")
     print("Роли созданы: student, teacher, admin")
 
-    # --- категории ---
     cat_python = create_category("Python", "Курсы по языку Python")
     cat_web = create_category("Веб-разработка", "Фронтенд и бэкенд разработка")
     print(f"Созданы категории: {cat_python}, {cat_web}")
 
-    # --- пользователи ---
     teacher = create_user(
         full_name="Иван Преподавателев",
         email="teacher@example.com",
         password_hash=fake_hash("teacher123"),
-        role_name="teacher",     # ← имя роли, а не строка role
+        role_name="teacher",
     )
     student = create_user(
         full_name="Пётр Студентов",
@@ -45,7 +34,6 @@ def run():
     )
     print(f"Созданы пользователи: {teacher}, {student}, {admin}")
 
-    # --- курс с модулями ---
     course = create_course(
         title="Основы Python",
         description="Курс для начинающих: синтаксис, типы данных, функции",
@@ -58,7 +46,6 @@ def run():
     create_module(course.id, "Функции", order_num=3, content="Определение и вызов функций")
     print(f"Создан курс с модулями: {course}")
 
-    # --- запись студента на курс ---
     enrollment = enroll_student(student_id=student.id, course_id=course.id)
     print(f"Студент записан на курс: {enrollment}")
 

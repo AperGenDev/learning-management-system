@@ -1,10 +1,3 @@
-"""
-Демонстрационный скрипт: прогоняет основные сценарии использования из ЛР0
-
-Запускать после create_tables.py и seed_data.py:
-    python test_scenarios.py
-"""
-
 from utils import fake_hash
 import crud
 
