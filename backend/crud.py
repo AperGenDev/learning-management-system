@@ -1,6 +1,5 @@
 from sqlalchemy import select
-from database import SessionLocal
-from models import Role, User, Category, Course, Module, Enrollment
+from backend.models import Role, User, Category, Course, Module, Enrollment
 from sqlalchemy.orm import Session, selectinload
 
 

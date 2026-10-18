@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from backend.schemas.role import RoleRead
 
 class UserCreate(BaseModel):
     full_name: str = Field(min_length=1, max_length=200)
@@ -16,10 +17,7 @@ class UserCreate(BaseModel):
         },
     )
 
-class RoleRead(BaseModel):
-    id: int
-    name: str
-    model_config = ConfigDict(from_attributes=True)
+
 
 class UserRead(BaseModel):
     id: int
