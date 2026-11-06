@@ -1,95 +1,98 @@
-from utils import fake_hash
-import crud
+from datetime import datetime
 
-def scenario_registration():
+from backend import crud
+from backend.database import SessionLocal
+from backend.security import hash_password, verify_password
+
+SUFFIX = datetime.now().strftime("%H%M%S")
+
+
+def scenario_registration(session):
     print("\n--- Сценарий 1: Регистрация ---")
-    user = crud.create_user(
-        full_name="Данил Богданов",
-        email="new_mail@example.com",
-        password_hash=fake_hash("mypassword"),
-        role_name="student",
-    )
-    print(f"Зарегистрирован новый пользователь: {user}")
+    email = f"new_user_{SUFFIX}@example.com"
+    if crud.get_user_by_email(session, email):
+        print("Пользователь с таким email уже есть")
+        return None
+    user = crud.create_user(session, full_name="Новый Студент", email=email,
+                            password_hash=hash_password("mypassword"), role_name="student")
+    print(f"Зарегистрирован: {user}, роль: {user.role.name}")
     return user
 
 
-def scenario_login(email: str, password: str):
+def scenario_login(session, email: str, password: str):
     print("\n--- Сценарий 2: Авторизация ---")
-    user = crud.get_user_by_email(email)
-    if user is None:
-        print("Пользователь не найден")
+    user = crud.get_user_by_email(session, email)
+    if user is None or not verify_password(password, user.password_hash):
+        print("Неверный email или пароль")
         return None
-    if user.password_hash == fake_hash(password):
-        print(f"Авторизация успешна: {user}, роль: {user.role}")
-        return user
-    print("Неверный пароль")
-    return None
+    print(f"Авторизация успешна: {user}, роль: {user.role.name}")
+    return user
 
 
-def scenario_catalog():
-    print("\n--- Сценарий 3: Просмотр каталога курсов ---")
-    all_courses = crud.get_courses_catalog()
-    print(f"Все опубликованные курсы: {all_courses}")
-
-    categories = crud.get_all_categories()
-    if categories:
-        first_category = categories[0]
-        filtered = crud.get_courses_catalog(category_id=first_category.id)
-        print(f"Курсы в категории '{first_category.name}': {filtered}")
+def scenario_catalog(session):
+    print("\n--- Сценарий 3: Просмотр каталога ---")
+    for course in crud.get_courses_catalog(session):
+        print(f"  {course}")
+    category = crud.get_category_by_name(session, "Python")
+    if category:
+        print(f"Фильтр по категории '{category.name}': {crud.get_courses_catalog(session, category.id)}")
 
 
-def scenario_enrollment(student_id: int, course_id: int):
-    print("\n--- Сценарий 4: Запись на курс ---")
-    result = crud.enroll_student(student_id=student_id, course_id=course_id)
-    if result is None:
-        print("Студент уже был записан на этот курс ранее — новая запись не создана")
-    else:
-        print(f"Студент записан на курс: {result}")
-
-    my_courses = crud.get_my_courses(student_id)
-    print(f"Раздел «Мои курсы» студента: {my_courses}")
-
-
-def scenario_course_progress(course_id: int):
-    print("\n--- Сценарий 5: Прохождение курса ---")
-    modules = crud.get_modules_by_course(course_id)
-    print(f"Структура курса (модули по порядку):")
-    for module in modules:
-        print(f"  {module.order_num}. {module.title} — {module.content}")
-
-
-def scenario_create_course(teacher_id: int, category_id: int):
+def scenario_create_course(session, teacher):
     print("\n--- Сценарий 6: Создание курса преподавателем ---")
-    course = crud.create_course(
-        title="Postgress SQL",
-        description="Основы реляционных баз данных и языка SQL Postgress",
-        author_id=teacher_id,
-        category_id=category_id,
-        is_published=True,
-    )
-    module = crud.create_module(course.id, "Введение в PSQL", order_num=1, content="Что такое SQL")
-    print(f"Создан курс: {course}")
-    print(f"Добавлен модуль: {module}")
+    category = crud.get_category_by_name(session, "Базы данных")
+    course = crud.create_course(session, title=f"PostgreSQL {SUFFIX}",
+                                description="Основы PostgreSQL", author_id=teacher.id,
+                                category_id=category.id if category else None, is_published=True)
+    module1 = crud.create_module(session, course.id, "Введение в PostgreSQL", order_num=1, content="Что такое СУБД")
+    module2 = crud.create_module(session, course.id, "Индексы", order_num=2, content="B-tree и когда он нужен")
+    print(f"Создан курс: {course}\nДобавлены модули: {module1}, {module2}")
+
+    crud.update_course(session, course.id, description="Основы PostgreSQL (обновлено)")
+    print(f"Курс отредактирован: {crud.get_course_by_id(session, course.id).description}")
     return course
 
 
-def main():
-    scenario_registration()
+def scenario_enrollment(session, student, course):
+    print("\n--- Сценарий 4: Запись на курс ---")
+    enrollment = crud.enroll_student(session, student.id, course.id)
+    print(f"Запись создана: {enrollment}")
+    again = crud.enroll_student(session, student.id, course.id)
+    print(f"Повторная запись: {'отклонена (уже записан)' if again is None else again}")
+    print(f"«Мои курсы» студента: {crud.get_my_courses(session, student.id)}")
 
-    student = scenario_login("student@example.com", "student123")
 
-    scenario_catalog()
+def scenario_course_progress(session, course):
+    print("\n--- Сценарий 5: Прохождение курса ---")
+    for module in crud.get_modules_by_course(session, course.id):
+        print(f"  {module.order_num}. {module.title} — {module.content}")
 
-    teacher = crud.get_user_by_email("teacher@example.com")
-    categories = crud.get_all_categories()
-    new_course = scenario_create_course(teacher.id, categories[0].id)
 
-    if student is not None:
-        scenario_enrollment(student.id, new_course.id)
-        scenario_course_progress(new_course.id)
+def scenario_cleanup(session, course, user):
+    print("\n--- Удаление (D в CRUD) ---")
+    print(f"Удалён курс {course.id}: {crud.delete_course(session, course.id)} (модули и записи удалены каскадно)")
+    if user:
+        print(f"Удалён пользователь {user.id}: {crud.delete_user(session, user.id)}")
 
-    students_of_course = crud.get_students_of_course(new_course.id)
-    print(f"\nСтуденты, записанные на курс '{new_course.title}': {students_of_course}")
+
+def main() -> None:
+    with SessionLocal() as session:
+        if crud.get_role_by_name(session, "student") is None:
+            print("Сначала загрузите тестовые данные: python -m backend.seed_data")
+            return
+
+        new_user = scenario_registration(session)
+        student = scenario_login(session, "student@example.com", "student123")
+        scenario_login(session, "student@example.com", "wrong-password")
+        scenario_catalog(session)
+
+        teacher = crud.get_user_by_email(session, "teacher@example.com")
+        course = scenario_create_course(session, teacher)
+        if student:
+            scenario_enrollment(session, student, course)
+        scenario_course_progress(session, course)
+        print(f"\nСтуденты курса '{course.title}': {crud.get_students_of_course(session, course.id)}")
+        scenario_cleanup(session, course, new_user)
 
 
 if __name__ == "__main__":

@@ -5,6 +5,7 @@ from .category import CategoryCreate, CategoryRead
 from .course import CourseCreate, CourseRead, CourseUpdate
 from .module import ModuleCreate, ModuleRead, ModuleUpdate
 from .enrollment import EnrollmentRead
+from .recommendation import RecommendationRead
 
 __all__ = [
     "Token", "LoginRequest",
@@ -14,4 +15,5 @@ __all__ = [
     "CourseCreate", "CourseRead", "CourseUpdate",
     "ModuleCreate", "ModuleRead", "ModuleUpdate",
     "EnrollmentRead",
+    "RecommendationRead",
 ]

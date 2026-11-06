@@ -1,12 +1,20 @@
+# ЛР1: база данных
 SQLAlchemy==2.0.54
 psycopg2-binary>=2.9
 python-dotenv>=1.0
 alembic==1.20.0
+
+#ЛР2: REST API, валидация, JWT
 fastapi
 uvicorn[standard]
-python-jose[cryptography]
-bcrypt==4.0.1
+gunicorn
 python-multipart
 pydantic-settings
 pydantic[email]
-gunicorn
+python-jose[cryptography]
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+
+#ЛР3: gRPC
+grpcio>=1.66
+grpcio-tools>=1.66

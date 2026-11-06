@@ -1,0 +1,38 @@
+// Контракт сервиса рекомендаций (ЛР3).
+// API Service (клиент) вызывает GetRecommendations, сервис рекомендаций (сервер)
+// возвращает отсортированный список курсов. Из этого файла утилита protoc
+// генерирует recommendation_pb2.py (сообщения) и recommendation_pb2_grpc.py (клиент/сервер).
+
+syntax = "proto3";
+
+package recommendation;
+
+service RecommendationService {
+  // Подобрать курсы для студента по его записям и каталогу.
+  rpc GetRecommendations (RecommendationRequest) returns (RecommendationResponse);
+}
+
+// Краткие сведения о курсе, нужные для расчёта.
+message CourseInfo {
+  int64 id = 1;
+  int64 category_id = 2;     // 0 - курс без категории
+  int32 students_count = 3;  // сколько студентов уже записано (популярность)
+}
+
+// что API отправляет сервису
+message RecommendationRequest {
+  int64 student_id = 1;
+  repeated CourseInfo enrolled = 2;    // курсы, на которые студент уже записан
+  repeated CourseInfo candidates = 3;  // опубликованные курсы каталога
+  int32 limit = 4;                     // сколько рекомендаций вернуть
+}
+
+message RecommendedCourse {
+  int64 course_id = 1;
+  double score = 2;
+  string reason = 3;  // человекочитаемое объяснение, почему курс предложен
+}
+
+message RecommendationResponse {
+  repeated RecommendedCourse items = 1;
+}
