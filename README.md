@@ -1,6 +1,6 @@
 # learning-management-system
 
-Система управления учебными курсами — проект по курсу «Технологии сетевого программирования».
+Система управления учебными курсами 
 
 Апергенов Дамир, Богданов Данил
 
@@ -12,7 +12,6 @@
 | API Service | FastAPI, SQLAlchemy, Pydantic, JWT | процесс на компьютере, порт 8000 |
 | Recommendation Service | gRPC, Protocol Buffers | процесс на компьютере, порт 50051 |
 
-Отчёты по лабораторным: папка [`docs/`](docs/).
 
 ## Структура
 
@@ -26,7 +25,6 @@ backend/                 API Service (FastAPI)
 grpc_contracts/          .proto-контракт и сгенерированный код
 recommendation_service/  gRPC-сервис рекомендаций
 migrations/              миграции Alembic
-docs/                    отчёты по лабораторным
 ```
 
 ## Запуск (Windows, PowerShell)
