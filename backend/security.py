@@ -11,13 +11,25 @@ def hash_password(password: str) -> str:
 def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
-def create_access_token(subject: str, role: str | None = None) -> str:
+def create_access_token(
+    subject: str,
+    role: str | None = None,
+    *,
+    uid: int
+) -> str:
     payload = {
         "sub": subject,
         "role": role,
-        "exp": datetime.now(timezone.utc) + timedelta(minutes=setting.ACCESS_TOKEN_EXPIRE_MINUTES),
+        "uid": uid,
+        "exp": datetime.now(timezone.utc) + timedelta(
+            minutes=setting.ACCESS_TOKEN_EXPIRE_MINUTES
+        ),
     }
-    return jwt.encode(payload, setting.SECRET_KEY, algorithm=setting.ALGORITHM)
+    return jwt.encode(
+        payload,
+        setting.SECRET_KEY,
+        algorithm=setting.ALGORITHM
+    )
 
 def decode_token(token: str) -> dict:
     return jwt.decode(token, setting.SECRET_KEY, algorithms=[setting.ALGORITHM])

@@ -23,7 +23,7 @@ class AuthService:
                 password_hash=hash_password(data.password),
                 role_name=data.role_name,
             )
-        except ValueError as exc:  # неизвестная роль
+        except ValueError as exc:  
             raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
 
     def login(self, email: str, password: str) -> Token:
@@ -33,4 +33,10 @@ class AuthService:
         if not user.is_active:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "User is blocked")
         role_name = user.role.name if user.role else None
-        return Token(access_token=create_access_token(subject=user.email, role=role_name))
+        return Token(
+                    access_token=create_access_token(
+                        subject=user.email,
+                        role=role_name,
+                        uid=user.id
+                    )
+        )

@@ -1,8 +1,3 @@
-"""Бизнес-логика работы с курсами, модулями и записями на курсы.
-
-Роутеры (REST API и веб-страницы) не обращаются к crud напрямую — только через
-этот сервис. Поэтому проверки прав и правила предметной области живут в одном месте.
-"""
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -12,12 +7,17 @@ from backend.models import Course, Module, User
 from backend.schemas.course import CourseCreate, CourseUpdate
 from backend.schemas.module import ModuleCreate, ModuleUpdate
 
+from backend.config import setting
+from backend.events import EventPublisher
 
 class CourseService:
     def __init__(self, db: Session):
         self.db = db
+        self.publisher = EventPublisher(
+            setting.RABBITMQ_URL,
+            setting.EVENTS_EXCHANGE
+        )
 
-    # ---------- проверки ----------
 
     @staticmethod
     def _is_admin(user: User) -> bool:
@@ -31,8 +31,6 @@ class CourseService:
     def _check_category(self, category_id: int | None) -> None:
         if category_id is not None and crud.get_category_by_id(self.db, category_id) is None:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Category not found")
-
-    # ---------- курсы ----------
 
     def list_catalog(self, category_id: int | None = None) -> list[Course]:
         return crud.get_courses_catalog(self.db, category_id)
@@ -73,10 +71,9 @@ class CourseService:
     def can_edit(self, course: Course, user: User | None) -> bool:
         return user is not None and (course.author_id == user.id or self._is_admin(user))
 
-    # ---------- модули ----------
 
     def list_modules(self, course_id: int) -> list[Module]:
-        self.get(course_id)  # 404, если курса нет
+        self.get(course_id)  
         return crud.get_modules_by_course(self.db, course_id)
 
     def _get_module(self, course_id: int, module_id: int) -> Module:
@@ -88,10 +85,14 @@ class CourseService:
     def add_module(self, course_id: int, data: ModuleCreate, user: User) -> Module:
         course = self.get(course_id)
         self._check_owner(course, user)
+
         try:
-            return crud.create_module(
-                self.db, course_id=course_id, title=data.title,
-                order_num=data.order_num, content=data.content,
+            module = crud.create_module(
+                self.db,
+                course_id=course_id,
+                title=data.title,
+                order_num=data.order_num,
+                content=data.content,
             )
         except IntegrityError:
             self.db.rollback()
@@ -99,6 +100,19 @@ class CourseService:
                 status.HTTP_409_CONFLICT,
                 f"Module with order_num={data.order_num} already exists in this course",
             )
+
+        recipients = crud.get_student_ids_of_course(self.db, course_id)
+
+        self.publisher.publish(
+            event="module.added",
+            recipients=recipients,
+            course_id=course.id,
+            course_title=course.title,
+            module_id=module.id,
+            module_title=module.title,
+        )
+
+        return module
 
     def update_module(self, course_id: int, module_id: int, data: ModuleUpdate, user: User) -> Module:
         course = self.get(course_id)
@@ -116,7 +130,6 @@ class CourseService:
         self._get_module(course_id, module_id)
         crud.delete_module(self.db, module_id)
 
-    # ---------- записи на курс ----------
 
     def enroll(self, course_id: int, student: User):
         """Сценарий 4: запись студента на опубликованный курс."""

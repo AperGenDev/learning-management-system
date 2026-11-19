@@ -1,8 +1,3 @@
-"""gRPC-клиент сервиса рекомендаций. API Service вызывает удалённый метод
-GetRecommendations как обычная функция Python.
-
-Модуль зависит только от grpc и сгенерированного контракта  без БД и FastAPI.
-"""
 from dataclasses import dataclass
 
 import grpc

@@ -1,10 +1,3 @@
-"""Перегенерация Python-кода из recommendation.proto.
-
-Запуск: python -m grpc_contracts.generate
-
-пакет grpcio-tools. 
-"""
-
 import os
 from pathlib import Path
 
